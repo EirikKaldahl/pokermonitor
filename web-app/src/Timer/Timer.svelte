@@ -3,12 +3,37 @@
 	import Controller from './Controller.svelte';
 	import { round } from '../stores/gameStore';
 	export let timeFromUser;
+	export let breakTimeFromUser;
+	export let roundsToBreakFromUser;
 
 	const resetTimer = () => {
 		return timeFromUser;
 	};
 	let timeRemaining = resetTimer();
+
+	const setBreakDuration = () => {
+		return breakTimeFromUser;
+	};
+
+	const initiateBreakTimer = () => {
+		return roundsToBreakFromUser * timeFromUser;
+	};
+	let timeToBreak = initiateBreakTimer();
+
+	const setBreakTimer = () => {
+		return roundsToBreakFromUser * timeFromUser + setBreakDuration();
+	};
+
 	let isPaused = false;
+	let isBreak = false;
+
+	const setMax = () => {
+		if (isBreak) {
+			return breakTimeFromUser;
+		}
+		return timeFromUser;
+	};
+	let max = setMax();
 
 	//const audio = new Audio('https://www.soundjay.com/button/beep-01a.mp3');
 
@@ -21,7 +46,9 @@
 		const zeroPaddedSeconds = seconds.toString().padStart(2, '0');
 		return `${minutes}:${zeroPaddedSeconds}`;
 	};
+
 	const togglePause = () => (isPaused = !isPaused);
+	const toggleBreak = () => (isBreak = !isBreak);
 	const reduceTime = () => {
 		// if (timeRemaining == oneMin) {
 		// 	audio.play();
@@ -29,7 +56,16 @@
 		// if (timeRemaining > 0 && timeRemaining < tenSec) {
 		// 	audio.play();
 		// }
+		if (timeToBreak === 0) {
+			isBreak = true;
+			timeRemaining = setBreakDuration();
+			timeToBreak = setBreakTimer();
+			clearInterval(interval);
+			interval = setInterval(reduceTime, 1000);
+		}
+
 		if (timeRemaining === 0) {
+			isBreak = false;
 			round.increment();
 			timeRemaining = resetTimer();
 			clearInterval(interval);
@@ -37,6 +73,7 @@
 		}
 		if (!isPaused) {
 			timeRemaining = Math.max(0, timeRemaining - 1);
+			timeToBreak = Math.max(0, timeToBreak - 1);
 		}
 	};
 	let interval = setInterval(reduceTime, 1000);
@@ -63,6 +100,6 @@
 
 <div>
 	<p>{formatTime(timeRemaining)}</p>
-	<Slider bind:timeRemaining max={timeFromUser} />
+	<Slider bind:timeRemaining max={setMax()} />
 	<Controller {isPaused} {togglePause} />
 </div>
